@@ -38,9 +38,9 @@ wiring up a real key.
 - **Charts**: hand-rolled inline SVG (`backend/app/charts.py`) — kept dependency-free
   (no matplotlib/numpy) since this environment's Python (3.14) has no prebuilt wheels
   for those yet and no C toolchain to build them from source
-- **Frontend**: static HTML/CSS/vanilla JS (served by FastAPI itself), styled per
-  `SKILL.md`'s Apple-design principles — instant press feedback, spring-like step
-  animations, translucent cards, `prefers-reduced-motion` support
+- **Frontend**: static HTML/CSS/vanilla JS (served by FastAPI itself) — instant press
+  feedback, spring-like step animations, translucent cards, `prefers-reduced-motion`
+  support
 
 ## Where the template fields are defined
 
@@ -48,9 +48,11 @@ wiring up a real key.
 table's columns/rows, chart specs, and the fallback policy. Everything downstream reads
 from it:
 
-- `backend/app/skill/SKILL.md` — the packaged "Claude Agent Skill" (formatting
-  conventions, extraction priority, example input→output pairs) loaded into every
-  LLM agent's system prompt alongside the schema
+- `backend/app/skill/*.md` — one curated skill file per LLM agent (`classification.md`,
+  `financial_table.md`, `narrative.md`, `chart_data.md`, `reconciliation.md`), each with
+  that agent's own formatting conventions, extraction priority, and example
+  input→output pairs — not a shared prompt, so one agent's behavior can be tuned
+  without affecting the others
 - `backend/app/agents/financial_table.py`, `narrative.py`, `chart_data.py` — build
   their tool (structured-output) schemas directly from `report_schema.json`, so a
   schema change propagates without touching agent code
@@ -84,9 +86,35 @@ Financial Table (LLM) Narrative (LLM)  Chart Data (LLM)
 Each transition emits an SSE event (`GET /api/jobs/{id}/events`) consumed by the frontend
 as a step list.
 
+### Page-coverage guardrail
+
+Every PDF-consuming agent is told the document's true page count and required to report
+every page it actually reviewed (`pages_reviewed` in its tool schema). If an agent's
+reported pages don't cover the full document, that gap is logged and surfaced in the
+step's progress detail (e.g. `WARNING: read 8/12 pages, missed [9, 10, 11, 12]`) instead
+of failing silently.
+
+### Malformed tool-output recovery
+
+On some large documents, Claude occasionally corrupts a string-array tool field into a
+malformed shape (a leaked `<parameter name="$0">` tag plus sibling `$1`/`$2`/... keys
+instead of a proper JSON array). `backend/app/llm.py`'s `run_tool()` detects this and
+reassembles the array before returning — the underlying content is intact, only the
+shape was wrong. A `Recovered leaked array field ...` warning in the logs is this
+working as intended, not a failure.
+
 ## API
 
 - `POST /api/jobs` — multipart form (`company_name`, `file`) → `{job_id}`
 - `GET /api/jobs/{id}` — current status snapshot
 - `GET /api/jobs/{id}/events` — SSE stream of per-agent progress
 - `GET /api/jobs/{id}/download` — the generated PDF
+
+## Sample data
+
+`test_data/` holds five real quarterly-result PDFs used for manual testing. The repo
+root also has four generated sample reports (`ICICI_Research_Report.pdf`,
+`JSW_Research_Report.pdf`, `LTTS_Research_Report.pdf`, `POCL_Research_Report.pdf`) —
+example pipeline output kept for quick visual reference, not part of the app itself
+(actual runs write to `backend/storage/uploads/` and `backend/storage/outputs/`, keyed
+by job id).

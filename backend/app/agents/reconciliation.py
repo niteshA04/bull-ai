@@ -13,7 +13,7 @@ from .. import config, llm
 logger = logging.getLogger("app.agents.reconciliation")
 
 SYSTEM = f"""You are the Reconciliation agent in a financial report generation pipeline.
-{config.SKILL_TEXT}
+{config.SKILLS['reconciliation']}
 
 You will be given extracted financial table data, narrative text, and the source
 document. Flag any extracted value that does not match what the source document
@@ -33,9 +33,10 @@ TOOL_INPUT_SCHEMA = {
                 },
                 "required": ["field", "issue"],
             },
-        }
+        },
+        "pages_reviewed": llm.PAGES_REVIEWED_FIELD,
     },
-    "required": ["flags"],
+    "required": ["flags", "pages_reviewed"],
 }
 
 
@@ -48,6 +49,7 @@ def reconcile(ingested: dict, tables: dict, narrative: dict) -> dict:
     context = f"Extracted tables:\n{tables}\n\nExtracted narrative:\n{narrative}"
     user_content: list[dict]
     if ingested["mode"] == "native_document":
+        context += llm.coverage_instruction(ingested.get("page_count", 0))
         user_content = [{"type": "text", "text": context}, llm.pdf_document_block(ingested["file_path"])]
     else:
         user_content = [{"type": "text", "text": context + "\n\nSource document:\n" + ingested["text"]}]
@@ -59,7 +61,10 @@ def reconcile(ingested: dict, tables: dict, narrative: dict) -> dict:
             tool_name="reconciliation_result",
             tool_description="Report any reconciliation flags found.",
             input_schema=TOOL_INPUT_SCHEMA,
-            max_tokens=2048,
+            max_tokens=4096,
+        )
+        ingested.setdefault("_coverage", {})["reconciliation"] = llm.check_coverage(
+            result, ingested.get("page_count", 0), "reconciliation"
         )
         result["flags"] = chart_flags + result.get("flags", [])
         return result

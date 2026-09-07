@@ -8,7 +8,7 @@ from .. import config, llm
 logger = logging.getLogger("app.agents.narrative")
 
 SYSTEM = f"""You are the Narrative agent in a financial report generation pipeline.
-{config.SKILL_TEXT}
+{config.SKILLS['narrative']}
 
 Write the narrative sections of the report in the analyst voice of an equity research
 note: concise, factual, numbers-backed. Respect the max_words limits exactly. Every
@@ -39,27 +39,52 @@ TOOL_INPUT_SCHEMA = {
             "enum": ["BUY", "ACCUMULATE", "HOLD", "REDUCE", "SELL", "NOT RATED"],
         },
         "target_price": {"type": ["number", "null"]},
+        "pages_reviewed": llm.PAGES_REVIEWED_FIELD,
     },
-    "required": ["headline", "company_description", "key_highlights", "outlook_valuation", "rating"],
+    "required": ["headline", "company_description", "key_highlights", "outlook_valuation", "rating", "pages_reviewed"],
 }
+
+
+def _is_malformed(result: dict) -> bool:
+    """The model occasionally leaks raw tool-call text into an array field instead of
+    returning a proper list — iterating that string in the template renders one bullet
+    per character, blowing the report out to dozens of pages. Catch it here and retry."""
+    for field in ("key_highlights", "key_highlights_page2"):
+        if field in result and not isinstance(result[field], list):
+            return True
+    return False
 
 
 def write_narrative(ingested: dict, classification: dict, tables: dict) -> dict:
     if not config.LLM_AVAILABLE:
         return {}
     user_content = _build_user_content(ingested, classification, tables)
-    try:
-        return llm.run_tool(
-            system=SYSTEM,
-            user_content=user_content,
-            tool_name="narrative_result",
-            tool_description="Report the written narrative sections of the report.",
-            input_schema=TOOL_INPUT_SCHEMA,
-            max_tokens=2048,
-        )
-    except Exception:
-        logger.exception("Narrative agent failed; falling back to no narrative")
-        return {}
+    result: dict = {}
+    for attempt in range(2):
+        try:
+            result = llm.run_tool(
+                system=SYSTEM,
+                user_content=user_content,
+                tool_name="narrative_result",
+                tool_description="Report the written narrative sections of the report.",
+                input_schema=TOOL_INPUT_SCHEMA,
+                max_tokens=4096,
+            )
+        except Exception:
+            logger.exception("Narrative agent failed; falling back to no narrative")
+            return {}
+        if not _is_malformed(result):
+            break
+        logger.warning("Narrative agent returned malformed highlights on attempt %d; retrying", attempt + 1)
+    else:
+        for field in ("key_highlights", "key_highlights_page2"):
+            if field in result and not isinstance(result[field], list):
+                result[field] = []
+
+    ingested.setdefault("_coverage", {})["narrative"] = llm.check_coverage(
+        result, ingested.get("page_count", 0), "narrative"
+    )
+    return result
 
 
 def _build_user_content(ingested: dict, classification: dict, tables: dict) -> list[dict]:
@@ -70,6 +95,7 @@ def _build_user_content(ingested: dict, classification: dict, tables: dict) -> l
         "Write the narrative sections based on the source document below."
     )
     if ingested["mode"] == "native_document":
+        context += llm.coverage_instruction(ingested.get("page_count", 0))
         return [
             {"type": "text", "text": context},
             llm.pdf_document_block(ingested["file_path"]),

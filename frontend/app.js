@@ -115,20 +115,26 @@ form.addEventListener("submit", async (e) => {
   progressCard.hidden = false;
   buildStepList();
 
+  let finished = false;
   const es = new EventSource(`${API_BASE}/api/jobs/${jobId}/events`);
   es.onmessage = (msg) => {
+    if (finished) return;
     const event = JSON.parse(msg.data);
     if (event.step === "_complete") {
+      finished = true;
       es.close();
       resultBlock.hidden = false;
       resultSuccess.hidden = false;
+      resultError.hidden = true;
       downloadLink.href = `${API_BASE}/api/jobs/${jobId}/download`;
       resetBtn.hidden = false;
       return;
     }
     if (event.step === "_error") {
+      finished = true;
       es.close();
       resultBlock.hidden = false;
+      resultSuccess.hidden = true;
       resultError.hidden = false;
       errorDetail.textContent = event.detail || "Unknown error";
       resetBtn.hidden = false;

@@ -20,6 +20,13 @@ def _fallback_number(v):
     return v if isinstance(v, (int, float)) else FALLBACK["missing_number"]
 
 
+def _fallback_list(v):
+    """Guard against a malformed LLM response returning a string/other type where an
+    array field was expected — iterating a string in the template renders one <li> per
+    character, which can blow the report out to dozens of pages."""
+    return v if isinstance(v, list) else []
+
+
 def _clean_table(section: dict, values: dict) -> dict:
     """Drop rows with no values at all (missing_table_row -> omit_row); fallback per-cell."""
     if section.get("orientation") == "key_value":
@@ -70,8 +77,8 @@ def assemble(*, company_name: str, classification: dict, tables: dict, narrative
 
     ctx["headline"] = _fallback_string(narrative.get("headline"))
     ctx["company_description"] = _fallback_string(narrative.get("company_description"))
-    ctx["key_highlights"] = narrative.get("key_highlights") or []
-    ctx["key_highlights_page2"] = narrative.get("key_highlights_page2") or []
+    ctx["key_highlights"] = _fallback_list(narrative.get("key_highlights"))
+    ctx["key_highlights_page2"] = _fallback_list(narrative.get("key_highlights_page2"))
     ctx["outlook_valuation"] = _fallback_string(narrative.get("outlook_valuation"))
 
     table_section_lookup = {

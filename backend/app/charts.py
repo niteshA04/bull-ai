@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import base64
 
-ACCENT = "#0891b2"
+ACCENT = "#2596be"
 ACCENT_2 = "#e85d2f"
 GRID = "#e6e6e6"
 TEXT = "#666666"
@@ -107,9 +107,32 @@ def bar_line_combo(points: list[dict], width: int = 300, height: int = 200) -> s
     return _svg_to_data_uri(svg)
 
 
+def placeholder_chart(width: int = 300, height: int = 200) -> str:
+    """Blank axes with a centered 'Data not available' label, for a chart the source
+    document had no data for — keeps the grid slot instead of collapsing it."""
+    pad_l, pad_r, pad_t, pad_b = 26, 26, 12, 30
+    gridlines = "".join(
+        f'<line x1="{pad_l}" y1="{pad_t + i * (height - pad_t - pad_b) / 4:.1f}" '
+        f'x2="{width - pad_r}" y2="{pad_t + i * (height - pad_t - pad_b) / 4:.1f}" '
+        f'stroke="{GRID}" stroke-width="1"/>'
+        for i in range(5)
+    )
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  {gridlines}
+  <line x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{height - pad_b}" stroke="{GRID}" stroke-width="1"/>
+  <line x1="{pad_l}" y1="{height - pad_b}" x2="{width - pad_r}" y2="{height - pad_b}" stroke="{GRID}" stroke-width="1"/>
+  <text x="{width / 2:.1f}" y="{height / 2:.1f}" font-size="11" fill="{TEXT}" text-anchor="middle">Data not available</text>
+</svg>"""
+    return _svg_to_data_uri(svg)
+
+
+GRID_CHART_IDS = ("revenue_chart", "gov_chart", "ebitda_chart", "pat_chart")
+WIDE_CHART_IDS = ("recommendation_chart",)
+
+
 def render_all_charts(charts: dict) -> dict:
     out = {}
-    for chart_id, points in charts.items():
+    for chart_id, points in (charts or {}).items():
         if not points:
             continue
         try:
@@ -119,4 +142,8 @@ def render_all_charts(charts: dict) -> dict:
                 out[chart_id] = bar_line_combo(points)
         except Exception:
             continue
+    for chart_id in GRID_CHART_IDS:
+        out.setdefault(chart_id, placeholder_chart())
+    for chart_id in WIDE_CHART_IDS:
+        out.setdefault(chart_id, placeholder_chart(width=640, height=220))
     return out

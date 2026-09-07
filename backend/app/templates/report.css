@@ -1,53 +1,92 @@
-@page { size: A4; margin: 14mm 12mm; }
+/* page.pdf() is called with explicit zero margins, which takes priority over any
+   @page margin — so @page margin is set to 0 here too, to match reality instead of
+   fighting it, and .page owns 100% of the visual page margin itself via padding. This
+   makes header/footer/ribbon positioning deterministic: position:absolute + top/bottom/
+   left/right:0 on a child of .page (position:relative) always lands exactly on the true
+   physical page edge, regardless of how much in-flow content the page has. */
+@page { size: A4; margin: 0; }
 * { box-sizing: border-box; }
 body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; font-size: 9.5px; margin: 0; }
-.page { break-after: page; }
+.page {
+  position: relative;
+  min-height: 297mm;
+  padding: 14mm 12mm 32px 12mm; /* top right bottom(reserved for footer) left */
+  break-after: page;
+}
 .page:last-child { break-after: auto; }
 
-.report-header { border-bottom: 2px solid #0891b2; padding-bottom: 6px; margin-bottom: 8px; }
-.report-header .tag { font-size: 8px; color: #0891b2; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
-.report-header h1 { font-size: 20px; margin: 2px 0; letter-spacing: -0.01em; }
-.report-header .sub { font-size: 9px; color: #555; }
-.report-header .asof { font-size: 7.5px; color: #888; }
+.ribbon {
+  position: absolute; top: 0; right: 0; width: 9mm; height: 34mm;
+  background: #2596be; color: #fff; writing-mode: vertical-rl; text-orientation: mixed;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-size: 8px; font-weight: 600; letter-spacing: 0.03em; border-radius: 0 0 0 6px;
+}
 
-.rating-box { display: flex; align-items: center; gap: 10px; margin: 8px 0; break-inside: avoid; }
-.rating { font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 4px; color: #fff; background: #999; white-space: nowrap; }
-.rating-buy { background: #0891b2; }
-.rating-accumulate { background: #4c8c4a; }
-.rating-hold { background: #f9c74f; color: #333; }
-.rating-reduce { background: #e8863f; }
-.rating-sell { background: #e85d2f; }
-.rating-not_rated { background: #999; }
-.mini-table { flex: 1; border-collapse: collapse; font-size: 8.5px; }
-.mini-table td { padding: 2px 6px; border-bottom: 1px solid #eee; }
-.mini-table td:nth-child(odd) { color: #666; }
-.mini-table td:nth-child(even) { font-weight: 600; }
+.report-header { border-bottom: 2px solid #2596be; padding-bottom: 6px; margin-bottom: 8px; }
+.header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.header-left .tag { font-size: 8px; color: #2596be; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.header-left h1 { font-size: 20px; margin: 2px 0; letter-spacing: -0.01em; }
+.brand-logo { height: 30px; }
+.header-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.sector-line { font-size: 9px; color: #555; }
+.date-line { font-size: 7.5px; color: #888; margin-top: 2px; }
 
-h2.headline { font-size: 13px; margin: 8px 0 3px; color: #0891b2; }
-h3 { font-size: 10px; margin: 10px 0 4px; border-left: 3px solid #0891b2; padding-left: 6px; break-after: avoid; }
+.rating-pill {
+  font-weight: 700; font-size: 12px; padding: 5px 16px; border-radius: 3px;
+  border: 1px solid #ccc; background: #f2f2f2; color: #1a1a1a; white-space: nowrap; text-align: center;
+}
+.rating-buy { background: #e6f4f6; color: #2596be; border-color: #2596be; }
+.rating-accumulate { background: #eef7ec; color: #3f7a3d; border-color: #4c8c4a; }
+.rating-hold { background: #f2f2f2; color: #1a1a1a; border-color: #ccc; }
+.rating-reduce { background: #fdece0; color: #b45309; border-color: #e8863f; }
+.rating-sell { background: #fbe4e0; color: #b3331a; border-color: #e85d2f; }
+.rating-not_rated { background: #f2f2f2; color: #666; border-color: #ccc; }
+
+.info-panel { display: flex; gap: 8px; margin: 8px 0; break-inside: avoid; }
+.key-grid { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid #eee; }
+.kg-cell { padding: 3px 6px; font-size: 8px; border-right: 1px solid #eee; border-bottom: 1px solid #eee; display: flex; align-items: center; }
+.kg-cell:nth-child(6n) { border-right: none; }
+.kg-span2 { grid-column: span 2; }
+.kg-label { font-weight: 600; color: #666; background: #f7f9f7; }
+.kg-arrow { justify-content: center; font-size: 11px; }
+.arrow-up { color: #4c8c4a; }
+.arrow-down { color: #e8863f; }
+.arrow-flat { color: #999; }
+
+.target-panel { width: 34mm; flex-shrink: 0; border: 1px solid #eee; display: flex; flex-direction: column; }
+.tp-row { display: flex; justify-content: space-between; padding: 5px 8px; font-size: 9px; border-bottom: 1px solid #eee; flex: 1; align-items: center; }
+.tp-row:last-child { border-bottom: none; }
+.tp-row strong { color: #2596be; }
+
+h2.headline { font-size: 13px; margin: 8px 0 3px; color: #2596be; }
+h3 { font-size: 10px; margin: 10px 0 4px; border-left: 3px solid #2596be; padding-left: 6px; break-after: avoid; }
 h4 { font-size: 8.5px; margin: 4px 0 2px; text-align: center; }
 p.description { font-size: 9px; line-height: 1.5; margin: 0 0 6px; }
-p.muted { color: #999; font-style: italic; }
+.muted { color: #999; font-style: italic; }
 ul.highlights { margin: 0 0 6px; padding-left: 14px; }
 ul.highlights li { font-size: 8.5px; line-height: 1.5; margin-bottom: 2px; }
 
-.two-col { display: flex; gap: 14px; margin-bottom: 6px; align-items: flex-start; }
+.two-col { display: flex; gap: 10px; margin-bottom: 6px; align-items: stretch; }
 .two-col > .col-left { flex: 0 0 36%; }
 .two-col > .col-right { flex: 1; min-width: 0; }
 .two-col h3 { white-space: nowrap; font-size: 9px; }
 .two-col.equal > .col-left, .two-col.equal > .col-right { flex: 1; min-width: 0; }
 
+.section-card { border: 1px solid #dde3e3; border-radius: 3px; padding: 7px; margin-bottom: 8px; break-inside: avoid; }
+.chart-caption { font-size: 8.5px; margin: 4px 0 2px; text-align: left; color: #666; }
+
 .page-title { font-size: 12px; border-left: none; padding-left: 0; margin: 0 0 8px; color: #1a1a1a; }
-.col-heading { font-size: 9px; margin: 8px 0 3px; color: #0891b2; border-bottom: 1px solid #0891b2; padding-bottom: 2px; }
-tr.section-break td { background: #eef6f7; font-weight: 700; font-style: italic; color: #0891b2; padding: 3px 5px; }
+.col-heading { font-size: 9px; margin: 8px 0 3px; color: #2596be; border-bottom: 1px solid #2596be; padding-bottom: 2px; }
+tr.section-break td { background: #eef6f7; font-weight: 700; font-style: italic; color: #2596be; padding: 3px 5px; }
 
 table.data-table { width: 100%; border-collapse: collapse; font-size: 8px; break-inside: avoid; margin-bottom: 6px; }
-table.data-table th { background: #0891b2; color: #fff; padding: 3px 5px; text-align: right; font-weight: 600; }
+table.data-table th { background: #2596be; color: #fff; padding: 3px 5px; text-align: right; font-weight: 600; }
 table.data-table th:first-child { text-align: left; }
 table.data-table th[colspan] { text-align: center; border-left: 1px solid #fff; }
 table.data-table td { padding: 3px 5px; text-align: right; border-bottom: 1px solid #eee; }
 table.data-table td:first-child { text-align: left; color: #444; }
 table.data-table tr:nth-child(even) { background: #f7f9f7; }
+table.data-table td.muted { text-align: left; }
 
 .chart-block { break-inside: avoid; margin: 6px 0; }
 .chart-wide { width: 100%; }
@@ -56,8 +95,35 @@ table.data-table tr:nth-child(even) { background: #f7f9f7; }
 .chart-small { width: 100%; }
 
 table.data-table.text-cells td { text-align: left; }
-.static-partial .fine-print { font-size: 7.5px; line-height: 1.5; color: #555; }
-.static-partial .symbol-legend { display: flex; gap: 18px; font-size: 8px; margin: 6px 0; }
-.static-partial .symbol-legend .symbol { font-size: 11px; margin-right: 3px; }
+.static-partial h3 { margin: 6px 0 3px; }
+.static-partial .fine-print { font-size: 6.8px; line-height: 1.32; color: #555; margin: 0 0 2.5px; }
+.static-partial ol.fine-print { padding-left: 12px; margin: 1px 0 3px; }
+.static-partial ol.fine-print li { margin-bottom: 1.5px; }
+.static-partial .symbol-legend { display: flex; gap: 18px; font-size: 7.5px; margin: 3px 0; }
+.static-partial .symbol-legend .symbol { font-size: 10px; margin-right: 3px; }
 .muted-inline { font-size: 8px; font-weight: 400; color: #888; }
-.signature { margin-top: 16px; display: flex; justify-content: space-between; font-size: 8.5px; color: #444; border-top: 1px solid #ddd; padding-top: 6px; }
+.signature { margin-top: 8px; display: flex; justify-content: space-between; font-size: 8.5px; color: #444; border-top: 1px solid #ddd; padding-top: 6px; }
+
+.secondary-header {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 8px 12mm; background: #2596be;
+  display: flex; align-items: center; justify-content: flex-end;
+}
+.secondary-logo {
+  height: 26px;
+  filter: brightness(0) invert(1);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+
+.report-footer {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 5px 12mm; background: #2596be;
+  display: flex; align-items: center; gap: 10px;
+}
+.footer-logo {
+  width: 20px; height: 20px; flex-shrink: 0;
+  background-repeat: no-repeat; background-position: left center; background-size: auto 160%;
+  filter: brightness(0) invert(1);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.footer-url { flex: 1; text-align: center; color: #fff; font-size: 9px; letter-spacing: 0.02em; }

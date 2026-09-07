@@ -23,8 +23,10 @@ SCHEMA_PATH = BASE_DIR / "report_schema.json"
 with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
     REPORT_SCHEMA = json.load(f)
 
-with open(SKILL_DIR / "SKILL.md", "r", encoding="utf-8") as f:
-    SKILL_TEXT = f.read()
+SKILLS: dict[str, str] = {}
+for _name in ("classification", "financial_table", "narrative", "chart_data", "reconciliation"):
+    with open(SKILL_DIR / f"{_name}.md", "r", encoding="utf-8") as f:
+        SKILLS[_name] = f.read()
 
 FALLBACK_POLICY = REPORT_SCHEMA["fallback_policy"]
 

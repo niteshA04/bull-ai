@@ -8,121 +8,169 @@
 </head>
 <body>
 
+{% macro page_header() %}
+<header class="secondary-header">
+  {% if logo %}<img src="{{ logo }}" class="secondary-logo" alt="Geojit">{% endif %}
+</header>
+{% endmacro %}
+
+{% macro page_footer() %}
+<footer class="report-footer">
+  {% if logo %}<div class="footer-logo" style="background-image:url('{{ logo }}');"></div>{% endif %}
+  <div class="footer-url">www.geojit.com</div>
+</footer>
+{% endmacro %}
+
 <!-- PAGE 1 -->
 <section class="page">
+  {% if ctx.report_tag and ctx.report_tag != '—' %}<div class="ribbon">{{ ctx.report_tag }}</div>{% endif %}
+
   <header class="report-header">
-    <div class="tag">{{ ctx.report_tag }}</div>
-    <h1>{{ ctx.company_name }}</h1>
-    <div class="sub">{{ ctx.sector }} &middot; {{ ctx.report_date }}</div>
-    <div class="asof">Data as of {{ ctx.data_as_of }}</div>
+    <div class="header-top">
+      <div class="header-left">
+        <div class="tag">Retail Equity Research</div>
+        <h1>{{ ctx.company_name }}</h1>
+      </div>
+      {% if logo %}<img src="{{ logo }}" class="brand-logo" alt="Geojit">{% endif %}
+    </div>
+    <div class="header-meta">
+      <div class="sector-line">Sector: {{ ctx.sector }}</div>
+      <div class="rating-pill rating-{{ ctx.rating_box.rating|lower|replace(' ', '_') }}">{{ ctx.rating_box.rating }}</div>
+    </div>
+    <div class="date-line">{{ ctx.report_date }} &middot; Data as of {{ ctx.data_as_of }}</div>
   </header>
 
-  <div class="rating-box">
-    <div class="rating rating-{{ ctx.rating_box.rating|lower|replace(' ', '_') }}">{{ ctx.rating_box.rating }}</div>
-    <table class="mini-table">
-      <tr><td>CMP</td><td>{{ ctx.rating_box.cmp }}</td><td>Target Price</td><td>{{ ctx.rating_box.target_price }}</td></tr>
-      <tr><td>Upside/Downside</td><td>{{ ctx.rating_box.return_pct }}%</td><td>Time Frame</td><td>{{ ctx.rating_box.time_frame }}</td></tr>
-      <tr><td>BSE Code</td><td>{{ ctx.rating_box.bse_code }}</td><td>NSE Code</td><td>{{ ctx.rating_box.nse_code }}</td></tr>
-      <tr><td>Bloomberg</td><td>{{ ctx.rating_box.bloomberg_code }}</td><td>Sensex</td><td>{{ ctx.rating_box.sensex }}</td></tr>
-    </table>
+  <div class="info-panel">
+    <div class="key-grid">
+      <div class="kg-cell kg-label kg-span2">Key Changes</div>
+      <div class="kg-cell kg-label kg-span2">Target</div>
+      <div class="kg-cell kg-label">Rating</div>
+      <div class="kg-cell kg-label">Earnings</div>
+
+      <div class="kg-cell kg-span2"></div>
+      <div class="kg-cell kg-arrow kg-span2">{{ arrow(ctx.rating_box.key_change_target) }}</div>
+      <div class="kg-cell kg-arrow">{{ arrow(ctx.rating_box.key_change_rating) }}</div>
+      <div class="kg-cell kg-arrow">{{ arrow(ctx.rating_box.key_change_earnings) }}</div>
+
+      <div class="kg-cell kg-label">Stock Type</div>
+      <div class="kg-cell kg-label">Bloomberg Code</div>
+      <div class="kg-cell kg-label">Sensex</div>
+      <div class="kg-cell kg-label">NSE Code</div>
+      <div class="kg-cell kg-label">BSE Code</div>
+      <div class="kg-cell kg-label">Time Frame</div>
+
+      <div class="kg-cell">{{ ctx.rating_box.stock_type }}</div>
+      <div class="kg-cell">{{ ctx.rating_box.bloomberg_code }}</div>
+      <div class="kg-cell">{{ ctx.rating_box.sensex }}</div>
+      <div class="kg-cell">{{ ctx.rating_box.nse_code }}</div>
+      <div class="kg-cell">{{ ctx.rating_box.bse_code }}</div>
+      <div class="kg-cell">{{ ctx.rating_box.time_frame }}</div>
+    </div>
+
+    <div class="target-panel">
+      <div class="tp-row"><span>Target</span><strong>{{ "Rs. %s"|format(ctx.rating_box.target_price) if ctx.rating_box.target_price is number else ctx.rating_box.target_price }}</strong></div>
+      <div class="tp-row"><span>CMP</span><strong>{{ "Rs. %s"|format(ctx.rating_box.cmp) if ctx.rating_box.cmp is number else ctx.rating_box.cmp }}</strong></div>
+      <div class="tp-row"><span>Return</span><strong>{{ "%s%%"|format(ctx.rating_box.return_pct) if ctx.rating_box.return_pct is number else ctx.rating_box.return_pct }}</strong></div>
+    </div>
   </div>
 
-  <h2 class="headline">{{ ctx.headline }}</h2>
-  <p class="description">{{ ctx.company_description }}</p>
-
-  <h3>Key Highlights</h3>
-  <ul class="highlights">
-    {% for h in ctx.key_highlights %}<li>{{ h }}</li>{% endfor %}
-  </ul>
-
   <div class="two-col">
-    <div class="col-left">
-      <h3>Company Data</h3>
-      {{ kv_table(ctx.tables.company_data_table) }}
+    <div class="col-left section-card">
+      {{ kv_table(ctx.tables.company_data_table, 'Company Data') }}
 
       {% if ctx.charts.price_chart %}
       <div class="chart-block">
-        <h3>Price Chart</h3>
+        <h4 class="chart-caption">Price Chart</h4>
         <img src="{{ ctx.charts.price_chart }}" class="chart-wide">
       </div>
       {% endif %}
 
-      <h3>Y.E March (₹ Cr)</h3>
-      {{ row_table(ctx.tables.annual_estimates_table, ['FY-1', 'FYc', 'FYn']) }}
+      {{ row_table(ctx.tables.annual_estimates_table, ['FY-1', 'FYc', 'FYn'], title='Y.E March (₹ Cr)') }}
     </div>
-    <div class="col-right">
-      <h3>Shareholding Pattern (%)</h3>
-      {{ row_table(ctx.tables.shareholding_table, ['Q-2', 'Q-1', 'Latest']) }}
-      <h3>Price Performance (%)</h3>
-      {{ row_table(ctx.tables.price_performance_table, ['3M', '6M', '1Y']) }}
+    <div class="col-right section-card">
+      <h2 class="headline">{{ ctx.headline }}</h2>
+      <p class="description">{{ ctx.company_description }}</p>
+
+      <h3>Key Highlights</h3>
+      <ul class="highlights">
+        {% for h in ctx.key_highlights %}<li>{{ h }}</li>{% endfor %}
+      </ul>
+
+      {{ row_table(ctx.tables.shareholding_table, ['Q-2', 'Q-1', 'Latest'], title='Shareholding (%)') }}
+      {{ row_table(ctx.tables.price_performance_table, ['3M', '6M', '1Y'], title='Price Performance (%)') }}
 
       <h3>Outlook &amp; Valuation</h3>
       <p class="description">{{ ctx.outlook_valuation }}</p>
 
-      <h3>Quarterly Financials (₹ Cr)</h3>
-      {{ row_table(ctx.tables.quarterly_financials_table, ['Q Current', 'Q YoY', 'YoY %', 'Q QoQ', 'QoQ %']) }}
+      {{ row_table(ctx.tables.quarterly_financials_table, ['Q Current', 'Q YoY', 'YoY %', 'Q QoQ', 'QoQ %'], title='Quarterly Financials (₹ Cr)') }}
     </div>
   </div>
+  {{ page_footer() }}
 </section>
 
 <!-- PAGE 2 -->
 <section class="page">
-  <h3>Key highlights</h3>
-  <ul class="highlights">
-    {% for h in ctx.key_highlights_page2 %}<li>{{ h }}</li>{% endfor %}
-  </ul>
+  {{ page_header() }}
+  <div class="section-card">
+    <h3>Key highlights</h3>
+    <ul class="highlights">
+      {% for h in ctx.key_highlights_page2 %}<li>{{ h }}</li>{% endfor %}
+    </ul>
+  </div>
 
-  <div class="chart-grid">
+  <div class="section-card chart-grid">
     {% for cid, cap in [('revenue_chart','Revenue'), ('gov_chart','Gross Order Value'), ('ebitda_chart','EBITDA'), ('pat_chart','PAT')] %}
-    {% if ctx.charts[cid] %}
     <div class="chart-block small">
       <h4>{{ cap }}</h4>
       <img src="{{ ctx.charts[cid] }}" class="chart-small">
     </div>
-    {% endif %}
     {% endfor %}
   </div>
 
-  <h3>Change in Estimates</h3>
-  {% set cie = ctx.tables.change_in_estimates_table %}
-  {% if cie %}
-  <table class="data-table">
-    <tr>
-      <th rowspan="2">Metric</th>
-      <th colspan="2">Old Estimates</th>
-      <th colspan="2">New Estimates</th>
-      <th colspan="2">Change (%)</th>
-    </tr>
-    <tr><th>FYc</th><th>FYn</th><th>FYc</th><th>FYn</th><th>FYc</th><th>FYn</th></tr>
-    {% for row_key, cells in cie.items() %}
-    <tr>
-      <td>{{ row_key|label }}</td>
-      <td>{{ cells.old_fy_current }}</td><td>{{ cells.old_fy_next }}</td>
-      <td>{{ cells.new_fy_current }}</td><td>{{ cells.new_fy_next }}</td>
-      <td>{{ cells.change_pct_fy_current }}</td><td>{{ cells.change_pct_fy_next }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% else %}
-  <p class="muted">— No data available —</p>
-  {% endif %}
+  <div class="section-card">
+    <h3>Change in Estimates</h3>
+    {% set cie = ctx.tables.change_in_estimates_table %}
+    <table class="data-table">
+      <tr>
+        <th rowspan="2">Metric</th>
+        <th colspan="2">Old Estimates</th>
+        <th colspan="2">New Estimates</th>
+        <th colspan="2">Change (%)</th>
+      </tr>
+      <tr><th>FYc</th><th>FYn</th><th>FYc</th><th>FYn</th><th>FYc</th><th>FYn</th></tr>
+      {% if cie %}
+      {% for row_key, cells in cie.items() %}
+      <tr>
+        <td>{{ row_key|label }}</td>
+        <td>{{ cells.old_fy_current }}</td><td>{{ cells.old_fy_next }}</td>
+        <td>{{ cells.new_fy_current }}</td><td>{{ cells.new_fy_next }}</td>
+        <td>{{ cells.change_pct_fy_current }}</td><td>{{ cells.change_pct_fy_next }}</td>
+      </tr>
+      {% endfor %}
+      {% else %}
+      <tr><td colspan="7" class="muted">— No data available —</td></tr>
+      {% endif %}
+    </table>
+  </div>
+  {{ page_footer() }}
 </section>
 
 <!-- PAGE 3 -->
 <section class="page">
+  {{ page_header() }}
   <h3 class="page-title">Consolidated Financials</h3>
   {% set fy_cols = ['FY-2', 'FY-1', 'FYc(A)', 'FYc(E)', 'FYn(E)'] %}
-  <div class="two-col equal">
+  <div class="two-col equal section-card">
     <div class="col-left">
       <h4 class="col-heading">Profit &amp; Loss</h4>
-      {{ row_table(ctx.tables.profit_loss_table, fy_cols) }}
+      {{ row_table(ctx.tables.profit_loss_table, fy_cols, title='Y.E March (₹ Cr)') }}
 
       <h4 class="col-heading">Cashflow</h4>
-      {{ row_table(ctx.tables.cashflow_table, fy_cols) }}
+      {{ row_table(ctx.tables.cashflow_table, fy_cols, title='Y.E March (₹ Cr)') }}
     </div>
     <div class="col-right">
       <h4 class="col-heading">Balance Sheet</h4>
-      {{ row_table(ctx.tables.balance_sheet_table, fy_cols) }}
+      {{ row_table(ctx.tables.balance_sheet_table, fy_cols, title='Y.E March (₹ Cr)') }}
 
       <h4 class="col-heading">Ratio</h4>
       {{ row_table(ctx.tables.ratios_table, fy_cols, {
@@ -130,33 +178,31 @@
         'receivables_days': 'W.C & Liquidity',
         'gross_asset_turnover': 'Turnover & Leverage',
         'ev_sales': 'Valuation',
-      }) }}
+      }, title='Y.E March') }}
     </div>
   </div>
+  {{ page_footer() }}
 </section>
 
 <!-- PAGE 4 -->
 <section class="page">
-  <h3>Recommendation Summary <span class="muted-inline">(last 3 years)</span></h3>
-  <div class="two-col equal">
+  {{ page_header() }}
+  <div class="two-col equal section-card">
     <div class="col-left">
-      {% if ctx.charts.recommendation_chart %}
+      <h3>Recommendation Summary <span class="muted-inline">(last 3 years)</span></h3>
       <img src="{{ ctx.charts.recommendation_chart }}" class="chart-wide">
-      {% else %}
-      <p class="muted">— No price history available for this document —</p>
-      {% endif %}
     </div>
     <div class="col-right">
-      {% if ctx.recommendation_summary_table %}
       <table class="data-table">
         <tr><th>Dates</th><th>Rating</th><th>Target</th></tr>
+        {% if ctx.recommendation_summary_table %}
         {% for r in ctx.recommendation_summary_table %}
         <tr><td>{{ r.date }}</td><td>{{ r.rating }}</td><td>{{ r.target }}</td></tr>
         {% endfor %}
+        {% else %}
+        <tr><td colspan="3" class="muted">— No prior recommendation history available —</td></tr>
+        {% endif %}
       </table>
-      {% else %}
-      <p class="muted">— No prior recommendation history available for this document —</p>
-      {% endif %}
     </div>
   </div>
 
@@ -166,6 +212,7 @@
     <div>Analyst: {{ ctx.analyst_name }}</div>
     <div>Date: {{ ctx.analyst_signature_date }}</div>
   </div>
+  {{ page_footer() }}
 </section>
 
 </body>

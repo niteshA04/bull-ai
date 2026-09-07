@@ -28,7 +28,7 @@ FIELD_SECTIONS = [
 ]
 
 SYSTEM = f"""You are the Financial Table extraction agent in a financial report generation pipeline.
-{config.SKILL_TEXT}
+{config.SKILLS['financial_table']}
 
 Extract every numeric table defined in the tool schema from the source document. Only use
 figures actually present in the document (tables preferred over narrative text). Return
@@ -59,7 +59,9 @@ TOOL_INPUT_SCHEMA = {
     "properties": {
         **{s["id"]: _table_schema(s) for s in TABLE_SECTIONS},
         **{s["id"]: _fields_schema(s) for s in FIELD_SECTIONS},
+        "pages_reviewed": llm.PAGES_REVIEWED_FIELD,
     },
+    "required": ["pages_reviewed"],
 }
 
 
@@ -68,7 +70,7 @@ def extract_tables(ingested: dict) -> dict:
         return {}
     user_content = _build_user_content(ingested)
     try:
-        return llm.run_tool(
+        result = llm.run_tool(
             system=SYSTEM,
             user_content=user_content,
             tool_name="financial_tables",
@@ -76,6 +78,10 @@ def extract_tables(ingested: dict) -> dict:
             input_schema=TOOL_INPUT_SCHEMA,
             max_tokens=8192,
         )
+        ingested.setdefault("_coverage", {})["financial_table"] = llm.check_coverage(
+            result, ingested.get("page_count", 0), "financial_table"
+        )
+        return result
     except Exception:
         logger.exception("Financial Table agent failed; falling back to no table data")
         return {}
@@ -84,6 +90,7 @@ def extract_tables(ingested: dict) -> dict:
 def _build_user_content(ingested: dict) -> list[dict]:
     instruction = "Extract all financial tables from this document per the schema."
     if ingested["mode"] == "native_document":
+        instruction += llm.coverage_instruction(ingested.get("page_count", 0))
         return [
             {"type": "text", "text": instruction},
             llm.pdf_document_block(ingested["file_path"]),

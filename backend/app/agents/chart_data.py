@@ -8,7 +8,7 @@ from .. import config, llm
 logger = logging.getLogger("app.agents.chart_data")
 
 SYSTEM = f"""You are the Chart Data agent in a financial report generation pipeline.
-{config.SKILL_TEXT}
+{config.SKILLS['chart_data']}
 
 Extract chart-ready series data for each chart defined in the tool schema. Charts are
 often rendered as bar/line/donut graphics in the source document rather than tables —
@@ -38,8 +38,10 @@ CHART_SECTIONS = [
 TOOL_INPUT_SCHEMA = {
     "type": "object",
     "properties": {
-        s["id"]: {"type": "array", "items": POINT_SCHEMA} for s in CHART_SECTIONS
+        **{s["id"]: {"type": "array", "items": POINT_SCHEMA} for s in CHART_SECTIONS},
+        "pages_reviewed": llm.PAGES_REVIEWED_FIELD,
     },
+    "required": ["pages_reviewed"],
 }
 
 
@@ -48,7 +50,7 @@ def extract_charts(ingested: dict) -> dict:
         return {}
     user_content = _build_user_content(ingested)
     try:
-        return llm.run_tool(
+        result = llm.run_tool(
             system=SYSTEM,
             user_content=user_content,
             tool_name="chart_data_result",
@@ -56,6 +58,10 @@ def extract_charts(ingested: dict) -> dict:
             input_schema=TOOL_INPUT_SCHEMA,
             max_tokens=4096,
         )
+        ingested.setdefault("_coverage", {})["chart_data"] = llm.check_coverage(
+            result, ingested.get("page_count", 0), "chart_data"
+        )
+        return result
     except Exception:
         logger.exception("Chart Data agent failed; falling back to no chart data")
         return {}
@@ -69,6 +75,7 @@ def _build_user_content(ingested: dict) -> list[dict]:
         + text_layer[:6000]
     )
     if ingested["mode"] == "native_document":
+        instruction += llm.coverage_instruction(ingested.get("page_count", 0))
         return [
             {"type": "text", "text": instruction},
             llm.pdf_document_block(ingested["file_path"]),

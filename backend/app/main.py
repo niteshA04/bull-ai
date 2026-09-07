@@ -6,7 +6,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -61,17 +61,30 @@ async def get_job(job_id: str):
 
 
 @app.get("/api/jobs/{job_id}/events")
-async def job_events(job_id: str):
+async def job_events(request: Request, job_id: str):
     job = job_store.get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
 
+    async def _idle_until_disconnect():
+        # Keep the SSE connection open after the terminal event instead of ending the
+        # HTTP response — if we end it, the browser's EventSource treats that as an
+        # unexpected disconnect and auto-reconnects, which replays the terminal event a
+        # second time and can flip the UI to the error state right after showing success.
+        while not await request.is_disconnected():
+            await asyncio.sleep(1)
+
     async def stream():
-        yield "retry: 1000\n\n"
+        if job.status in ("done", "failed"):
+            step = "_complete" if job.status == "done" else "_error"
+            yield f"data: {json.dumps({'step': step, 'label': '', 'status': job.status, 'detail': job.error or '', 'ts': 0})}\n\n"
+            await _idle_until_disconnect()
+            return
         while True:
             event = await job.queue.get()
             yield f"data: {json.dumps(event)}\n\n"
             if event["step"] in ("_complete", "_error"):
+                await _idle_until_disconnect()
                 break
 
     return StreamingResponse(stream(), media_type="text/event-stream")

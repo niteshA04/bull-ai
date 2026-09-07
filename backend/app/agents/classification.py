@@ -8,7 +8,7 @@ from .. import config, llm
 logger = logging.getLogger("app.agents.classification")
 
 SYSTEM = f"""You are the Classification agent in a financial report generation pipeline.
-{config.SKILL_TEXT}
+{config.SKILLS['classification']}
 
 Given the ingested content of a company's financial document, identify the company,
 the type of document, and which report sections (by id, from report_schema.json) the
@@ -38,8 +38,9 @@ TOOL_INPUT_SCHEMA = {
             "type": "array",
             "items": {"type": "string", "enum": SCHEMA_SECTION_IDS},
         },
+        "pages_reviewed": llm.PAGES_REVIEWED_FIELD,
     },
-    "required": ["company_name", "doc_type", "sections_present", "sections_absent"],
+    "required": ["company_name", "doc_type", "sections_present", "sections_absent", "pages_reviewed"],
 }
 
 
@@ -56,13 +57,17 @@ def classify(ingested: dict, fallback_company_name: str) -> dict:
 
     user_content = _build_user_content(ingested, fallback_company_name)
     try:
-        return llm.run_tool(
+        result = llm.run_tool(
             system=SYSTEM,
             user_content=user_content,
             tool_name="classification_result",
             tool_description="Report the classification of this financial document.",
             input_schema=TOOL_INPUT_SCHEMA,
         )
+        ingested.setdefault("_coverage", {})["classification"] = llm.check_coverage(
+            result, ingested.get("page_count", 0), "classification"
+        )
+        return result
     except Exception:
         logger.exception("Classification agent failed; falling back to unclassified")
         return {
@@ -81,6 +86,7 @@ def _build_user_content(ingested: dict, fallback_company_name: str) -> list[dict
         "Confirm or correct it from the document itself."
     )
     if ingested["mode"] == "native_document":
+        prefix += llm.coverage_instruction(ingested.get("page_count", 0))
         return [
             {"type": "text", "text": prefix},
             llm.pdf_document_block(ingested["file_path"]),

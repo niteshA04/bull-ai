@@ -6,6 +6,7 @@ and rasterizes to a final PDF.
 """
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -13,6 +14,15 @@ from markupsafe import Markup
 
 from .. import config
 from ..charts import render_all_charts
+
+LOGO_PATH = config.BASE_DIR.parent / "frontend" / "assets" / "geojit_logo.png"
+
+
+def _logo_data_uri() -> str:
+    if not LOGO_PATH.exists():
+        return ""
+    data = base64.standard_b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{data}"
 
 TABLE_LABELS = {
     "market_cap_cr": "Market Cap (₹ Cr)", "week52_high_low": "52W High/Low", "enterprise_value_cr": "Enterprise Value (₹ Cr)",
@@ -58,18 +68,27 @@ def _label(row_key: str) -> str:
     return TABLE_LABELS.get(row_key, row_key.replace("_", " ").title())
 
 
-def _kv_table(rows: dict) -> Markup:
+def _arrow(direction) -> Markup:
+    direction = (direction or "no_change").lower()
+    glyph = {"up": "&#9650;", "down": "&#9660;"}.get(direction, "&#8212;")
+    cls = {"up": "arrow-up", "down": "arrow-down"}.get(direction, "arrow-flat")
+    return Markup(f'<span class="{cls}">{glyph}</span>')
+
+
+def _kv_table(rows: dict, title: str = "Metric") -> Markup:
     if not rows:
-        return Markup('<p class="muted">— No data available —</p>')
+        return Markup(f'<table class="data-table"><tr><th colspan="2">{title}</th></tr>'
+                       f'<tr><td colspan="2" class="muted">— No data available —</td></tr></table>')
     body = "".join(f"<tr><td>{_label(k)}</td><td>{v}</td></tr>" for k, v in rows.items())
-    return Markup(f'<table class="data-table"><tr><th>Metric</th><th>Value</th></tr>{body}</table>')
+    return Markup(f'<table class="data-table"><tr><th colspan="2">{title}</th></tr>{body}</table>')
 
 
-def _row_table(rows: dict, col_labels: list[str], section_breaks: dict | None = None) -> Markup:
-    if not rows:
-        return Markup('<p class="muted">— No data available —</p>')
+def _row_table(rows: dict, col_labels: list[str], section_breaks: dict | None = None, title: str = "Metric") -> Markup:
     ncols = len(col_labels) + 1
-    header = "<th>Metric</th>" + "".join(f"<th>{c}</th>" for c in col_labels)
+    if not rows:
+        return Markup(f'<table class="data-table"><tr><th colspan="{ncols}">{title}</th></tr>'
+                       f'<tr><td colspan="{ncols}" class="muted">— No data available —</td></tr></table>')
+    header = f"<th>{title}</th>" + "".join(f"<th>{c}</th>" for c in col_labels)
     body_rows = []
     for row_key, cells in rows.items():
         if section_breaks and row_key in section_breaks:
@@ -87,6 +106,7 @@ def render_pdf(ctx: dict, output_path: str) -> str:
     )
     env.globals["kv_table"] = _kv_table
     env.globals["row_table"] = _row_table
+    env.globals["arrow"] = _arrow
     env.filters["label"] = _label
 
     css = (config.TEMPLATES_DIR / "report.css").read_text(encoding="utf-8")
@@ -96,7 +116,7 @@ def render_pdf(ctx: dict, output_path: str) -> str:
     ctx["charts"] = render_all_charts(ctx.get("charts") or {})
 
     template = env.get_template("report.html")
-    html = template.render(ctx=ctx, css=css, static_page4=static_page4)
+    html = template.render(ctx=ctx, css=css, static_page4=static_page4, logo=_logo_data_uri())
 
     _html_to_pdf(html, output_path)
     return output_path

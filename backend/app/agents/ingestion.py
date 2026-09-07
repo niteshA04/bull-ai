@@ -16,12 +16,13 @@ from pathlib import Path
 def ingest(file_path: str) -> dict:
     ext = Path(file_path).suffix.lower()
     if ext == ".pdf":
-        text_layer = _extract_pdf_text(file_path)
+        text_layer, page_count = _extract_pdf_text(file_path)
         return {
             "format": "pdf",
             "mode": "native_document",
             "file_path": file_path,
             "text_layer": text_layer,
+            "page_count": page_count,
         }
     if ext in (".csv", ".txt"):
         text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
@@ -34,11 +35,12 @@ def ingest(file_path: str) -> dict:
     raise ValueError(f"Unsupported file format: {ext}")
 
 
-def _extract_pdf_text(file_path: str) -> str:
+def _extract_pdf_text(file_path: str) -> tuple[str, int]:
     try:
         from pypdf import PdfReader
 
         reader = PdfReader(file_path)
-        return "\n".join((page.extract_text() or "") for page in reader.pages)
+        text = "\n".join((page.extract_text() or "") for page in reader.pages)
+        return text, len(reader.pages)
     except Exception:
-        return ""
+        return "", 0

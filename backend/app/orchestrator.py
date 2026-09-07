@@ -14,6 +14,15 @@ from .agents import assembly, chart_data, classification, financial_table, inges
 from .models import Job, StepStatus
 
 
+def _coverage_detail(ingested: dict, agent_name: str, ok_detail: str = "") -> str:
+    cov = (ingested.get("_coverage") or {}).get(agent_name)
+    if not cov or not cov["total"]:
+        return ok_detail
+    if cov["missing"]:
+        return f"WARNING: read {len(cov['reviewed'])}/{cov['total']} pages, missed {cov['missing']}"
+    return ok_detail
+
+
 async def run_pipeline(job: Job):
     try:
         job.status = "running"
@@ -26,7 +35,11 @@ async def run_pipeline(job: Job):
         job.emit("classification", StepStatus.RUNNING)
         cls = await asyncio.to_thread(classification.classify, ingested, job.company_name)
         job.outputs["classification"] = cls
-        job.emit("classification", StepStatus.DONE, detail=cls.get("company_name", ""))
+        job.emit(
+            "classification",
+            StepStatus.DONE,
+            detail=_coverage_detail(ingested, "classification", cls.get("company_name", "")),
+        )
 
         job.emit("financial_table", StepStatus.RUNNING)
         job.emit("narrative", StepStatus.RUNNING)
@@ -37,15 +50,15 @@ async def run_pipeline(job: Job):
 
         tables = await tables_task
         job.outputs["tables_raw"] = tables
-        job.emit("financial_table", StepStatus.DONE)
+        job.emit("financial_table", StepStatus.DONE, detail=_coverage_detail(ingested, "financial_table"))
 
         narr = await asyncio.to_thread(narrative.write_narrative, ingested, cls, tables)
         job.outputs["narrative"] = narr
-        job.emit("narrative", StepStatus.DONE)
+        job.emit("narrative", StepStatus.DONE, detail=_coverage_detail(ingested, "narrative"))
 
         charts = await chart_task
         job.outputs["charts"] = charts
-        job.emit("chart_data", StepStatus.DONE)
+        job.emit("chart_data", StepStatus.DONE, detail=_coverage_detail(ingested, "chart_data"))
 
         job.emit("metrics", StepStatus.RUNNING)
         tables_with_metrics = await asyncio.to_thread(metrics.compute_metrics, tables)
@@ -57,7 +70,8 @@ async def run_pipeline(job: Job):
         chart_flags = reconciliation.verify_chart_points(charts, ingested)
         flags = recon.get("flags", []) + chart_flags
         job.outputs["flags"] = flags
-        job.emit("reconciliation", StepStatus.DONE, detail=f"{len(flags)} flag(s)")
+        recon_detail = _coverage_detail(ingested, "reconciliation", f"{len(flags)} flag(s)")
+        job.emit("reconciliation", StepStatus.DONE, detail=recon_detail)
 
         job.emit("assembly", StepStatus.RUNNING)
         ctx = assembly.assemble(

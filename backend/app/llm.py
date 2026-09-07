@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,30 @@ from . import config
 logger = logging.getLogger("app.llm")
 
 _client = None
+
+_LEAKED_ARRAY_RE = re.compile(r'^\s*<parameter name="\$0">(.*)$', re.DOTALL)
+
+
+def _recover_leaked_arrays(result: dict) -> dict:
+    """Rare but reproducible malformation seen on very large documents with a long
+    array-of-strings tool field: instead of a proper JSON array, the model emits the
+    first item as a string value with a leaked '<parameter name="$0">' tag, and the
+    remaining items as sibling top-level keys '$1', '$2', ... The content itself is
+    fine — only the shape is wrong — so reassemble it into the array the schema wants."""
+    for field, value in list(result.items()):
+        if not isinstance(value, str):
+            continue
+        m = _LEAKED_ARRAY_RE.match(value)
+        if not m:
+            continue
+        items = [m.group(1)]
+        i = 1
+        while f"${i}" in result:
+            items.append(result.pop(f"${i}"))
+            i += 1
+        result[field] = items
+        logger.warning("Recovered leaked array field %r (%d items) from malformed tool output", field, len(items))
+    return result
 
 
 class LLMUnavailable(Exception):
@@ -33,6 +58,41 @@ def _get_client():
 
         _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     return _client
+
+
+PAGES_REVIEWED_FIELD = {
+    "type": "array",
+    "items": {"type": "integer"},
+    "description": (
+        "Every page number (1-indexed) of the source document you actually reviewed before "
+        "answering, in order. You must review and list every page of the document, including "
+        "the last page — do not stop early or sample a subset."
+    ),
+}
+
+
+def coverage_instruction(page_count: int) -> str:
+    """Prompt text forcing the model to read (and self-report) every page."""
+    if not page_count:
+        return ""
+    return (
+        f"\n\nThis document has {page_count} pages. You must review every single page before "
+        f"responding, including page {page_count} (the last page) — do not stop after the first "
+        "few pages. List every page number you reviewed in the `pages_reviewed` field."
+    )
+
+
+def check_coverage(result: dict, page_count: int, agent_name: str) -> dict:
+    """Pop `pages_reviewed` out of a tool result and report any gap vs. the true page count."""
+    reviewed = sorted(set(result.pop("pages_reviewed", []) or []))
+    if not page_count:
+        return {"total": 0, "reviewed": reviewed, "missing": []}
+    missing = sorted(set(range(1, page_count + 1)) - set(reviewed))
+    if missing:
+        logger.warning(
+            "%s: reported reading %d/%d pages; missing %s", agent_name, len(reviewed), page_count, missing
+        )
+    return {"total": page_count, "reviewed": reviewed, "missing": missing}
 
 
 def pdf_document_block(file_path: str) -> dict:
@@ -74,5 +134,5 @@ def run_tool(
 
     for block in resp.content:
         if block.type == "tool_use" and block.name == tool_name:
-            return block.input
+            return _recover_leaked_arrays(block.input)
     raise RuntimeError(f"Model did not call tool {tool_name}")
