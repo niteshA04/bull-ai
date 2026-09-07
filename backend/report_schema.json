@@ -1,0 +1,228 @@
+{
+  "template_source": "Eternal-Geojit.pdf",
+  "pages": [
+    {
+      "page": 1,
+      "sections": [
+        {
+          "id": "header",
+          "type": "fields",
+          "fields": {
+            "report_tag": { "type": "string", "example": "Q1FY26 Result Update" },
+            "company_name": { "type": "string", "example": "Eternal Ltd." },
+            "sector": { "type": "string", "example": "Internet & Catalogue Retail" },
+            "report_date": { "type": "date", "example": "29th July, 2025" },
+            "data_as_of": { "type": "datetime", "example": "29-July-2025, 16:23hrs" }
+          }
+        },
+        {
+          "id": "rating_box",
+          "type": "fields",
+          "fields": {
+            "stock_type": { "type": "string", "example": "Large Cap" },
+            "bloomberg_code": { "type": "string" },
+            "sensex": { "type": "number" },
+            "nse_code": { "type": "string" },
+            "bse_code": { "type": "string" },
+            "time_frame": { "type": "string", "example": "12 Months" },
+            "target_price": { "type": "currency" },
+            "cmp": { "type": "currency" },
+            "return_pct": { "type": "percent" },
+            "rating": { "type": "enum", "values": ["BUY", "ACCUMULATE", "HOLD", "REDUCE", "SELL", "NOT RATED"] },
+            "key_change_target": { "type": "enum", "values": ["up", "down", "no_change"] },
+            "key_change_rating": { "type": "enum", "values": ["up", "down", "no_change"] },
+            "key_change_earnings": { "type": "enum", "values": ["up", "down", "no_change"] }
+          }
+        },
+        {
+          "id": "headline",
+          "type": "narrative",
+          "max_words": 15,
+          "example": "Blinkit propels growth; valuation limits upside"
+        },
+        {
+          "id": "company_description",
+          "type": "narrative",
+          "max_words": 60
+        },
+        {
+          "id": "key_highlights",
+          "type": "bullet_list",
+          "min_items": 3,
+          "max_items": 8,
+          "max_words_per_item": 40
+        },
+        {
+          "id": "company_data_table",
+          "type": "table",
+          "orientation": "key_value",
+          "rows": ["market_cap_cr", "week52_high_low", "enterprise_value_cr", "outstanding_shares_cr", "free_float_pct", "dividend_yield_pct", "avg_volume_6m_cr", "beta", "face_value"]
+        },
+        {
+          "id": "shareholding_table",
+          "type": "table",
+          "columns": ["quarter_minus2", "quarter_minus1", "quarter_latest"],
+          "rows": ["promoters_pct", "fiis_pct", "mfs_institutions_pct", "public_pct", "others_pct", "total_pct", "promoter_pledge"]
+        },
+        {
+          "id": "price_performance_table",
+          "type": "table",
+          "columns": ["3_month", "6_month", "1_year"],
+          "rows": ["absolute_return_pct", "absolute_sensex_pct", "relative_return_pct"]
+        },
+        {
+          "id": "outlook_valuation",
+          "type": "narrative",
+          "max_words": 150,
+          "note": "final sentence containing rating + target price should be bold in render"
+        },
+        {
+          "id": "quarterly_financials_table",
+          "type": "table",
+          "columns": ["q_current", "q_yoy", "yoy_growth_pct", "q_qoq", "qoq_growth_pct"],
+          "rows": ["sales", "ebitda", "margin_pct", "ebit", "pbt", "rep_pat", "adj_pat", "adj_eps"]
+        },
+        {
+          "id": "annual_estimates_table",
+          "type": "table",
+          "columns": ["fy_minus1_actual", "fy_current_estimate", "fy_next_estimate"],
+          "rows": ["sales", "growth_pct", "ebitda", "ebitda_margin_pct", "pat_adjusted", "pat_growth_pct", "adj_eps", "eps_growth_pct", "pe", "pb", "ev_ebitda", "roe_pct", "de"]
+        },
+        {
+          "id": "price_chart",
+          "type": "chart",
+          "chart_type": "line",
+          "series": ["stock_price", "sensex_rebased"],
+          "x": "date",
+          "period": "1_year_daily_or_weekly"
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "sections": [
+        {
+          "id": "change_in_estimates_table",
+          "type": "table",
+          "columns": ["old_fy_current", "old_fy_next", "new_fy_current", "new_fy_next", "change_pct_fy_current", "change_pct_fy_next"],
+          "rows": ["revenue", "ebitda", "margins_pct", "adj_pat", "eps"]
+        },
+        {
+          "id": "key_highlights_page2",
+          "type": "bullet_list",
+          "min_items": 3,
+          "max_items": 6,
+          "max_words_per_item": 60
+        },
+        {
+          "id": "revenue_chart",
+          "type": "chart",
+          "chart_type": "bar_line_combo",
+          "bar_series": "revenue_cr",
+          "line_series": "qoq_growth_pct",
+          "x": "quarter",
+          "period": "last_9_quarters"
+        },
+        {
+          "id": "gov_chart",
+          "type": "chart",
+          "chart_type": "bar_line_combo",
+          "bar_series": "gov_bn",
+          "line_series": "qoq_growth_pct",
+          "x": "quarter",
+          "period": "last_9_quarters"
+        },
+        {
+          "id": "ebitda_chart",
+          "type": "chart",
+          "chart_type": "bar_line_combo",
+          "bar_series": "ebitda_cr",
+          "line_series": "margin_pct",
+          "x": "quarter",
+          "period": "last_9_quarters"
+        },
+        {
+          "id": "pat_chart",
+          "type": "chart",
+          "chart_type": "bar_line_combo",
+          "bar_series": "pat_cr",
+          "line_series": "margin_pct",
+          "x": "quarter",
+          "period": "last_9_quarters"
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "sections": [
+        {
+          "id": "profit_loss_table",
+          "type": "table",
+          "columns": ["fy_minus2_actual", "fy_minus1_actual", "fy_current_actual", "fy_current_estimate", "fy_next_estimate"],
+          "rows": ["sales", "pct_change_sales", "ebitda", "pct_change_ebitda", "depreciation", "ebit", "interest", "other_income", "pbt", "pct_change_pbt", "tax", "tax_rate_pct", "reported_pat", "pat_att_common", "adj_pat", "pct_change_pat", "shares_outstanding_cr", "adj_eps", "pct_change_eps", "dps"]
+        },
+        {
+          "id": "balance_sheet_table",
+          "type": "table",
+          "columns": ["fy_minus2_actual", "fy_minus1_actual", "fy_current_actual", "fy_current_estimate", "fy_next_estimate"],
+          "rows": ["cash", "accounts_receivable", "inventories", "other_current_assets", "investments", "gross_fixed_assets", "net_fixed_assets", "cwip", "intangible_assets", "deferred_tax_net", "other_assets", "total_assets", "current_liabilities", "provisions", "debt_funds", "other_liabilities", "equity_capital", "reserves_surplus", "shareholder_funds", "minority_interest", "total_liabilities", "bvps"]
+        },
+        {
+          "id": "cashflow_table",
+          "type": "table",
+          "columns": ["fy_minus2_actual", "fy_minus1_actual", "fy_current_actual", "fy_current_estimate", "fy_next_estimate"],
+          "rows": ["net_inc_depreciation", "non_cash_adjustments", "other_adjustments", "changes_in_wc", "cf_operations", "capital_expenditure", "change_in_investments", "other_investment_cf", "cf_investment", "issue_of_equity", "issue_repay_debt", "dividends_paid", "other_finance_cf", "cf_finance", "change_in_cash", "closing_cash"]
+        },
+        {
+          "id": "ratios_table",
+          "type": "table",
+          "columns": ["fy_minus2_actual", "fy_minus1_actual", "fy_current_actual", "fy_current_estimate", "fy_next_estimate"],
+          "rows": ["ebitda_margin_pct", "ebit_margin_pct", "net_profit_margin_pct", "roe_pct", "roce_pct", "receivables_days", "inventory_days", "payables_days", "current_ratio", "quick_ratio", "gross_asset_turnover", "total_asset_turnover", "interest_coverage_ratio", "adj_debt_equity", "ev_sales", "ev_ebitda", "pe", "pbv"]
+        }
+      ]
+    },
+    {
+      "page": 4,
+      "sections": [
+        {
+          "id": "recommendation_summary_table",
+          "type": "table",
+          "dynamic": true,
+          "columns": ["date", "rating", "target"],
+          "note": "history of rating changes, variable row count"
+        },
+        {
+          "id": "recommendation_chart",
+          "type": "chart",
+          "chart_type": "line",
+          "series": ["stock_price"],
+          "note": "annotated with buy/hold/sell markers from recommendation_summary_table"
+        },
+        {
+          "id": "static_boilerplate",
+          "type": "static_partial",
+          "dynamic": false,
+          "note": "Investment Rating Criteria table, disclaimer/regulatory disclosures, grievance process, rating definitions — identical across all reports, not extracted per-company",
+          "dynamic_subfields": ["analyst_name", "analyst_signature_date"]
+        }
+      ]
+    }
+  ],
+  "symbol_definitions": {
+    "up": { "glyph": "▲", "color": "#2e7d32", "label": "Upgrade" },
+    "no_change": { "glyph": "●", "color": "#f9c74f", "label": "No Change" },
+    "down": { "glyph": "▼", "color": "#e85d2f", "label": "Downgrade" },
+    "applies_to": ["key_change_target", "key_change_rating", "key_change_earnings"]
+  },
+  "extraction_notes": {
+    "pdf_input_mode": "native_multimodal",
+    "reason": "chart/infographic-style source pages (bar charts, donut/nested-ring charts) require visual reasoning to associate values with labels/sections; a deterministic text-only extractor returns disconnected numbers with lost associations",
+    "chart_data_agent_crosscheck": "for any chart value read from a PDF page, verify the raw numeric/label string also appears in that page's deterministically-extracted text layer before accepting it as reconciled; flag as unverified if not found"
+  },
+  "fallback_policy": {
+    "missing_string": "—",
+    "missing_number": "N/A",
+    "missing_table_row": "omit_row",
+    "missing_chart": "omit_chart_placeholder_note"
+  }
+}

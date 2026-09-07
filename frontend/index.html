@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Research Report Generator</title>
+<link rel="icon" href="assets/logo.png" type="image/png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <main class="shell">
+    <header class="hero">
+      <div class="brand">
+        <img src="assets/logo.png" alt="" class="brand-mark" />
+        <img src="assets/text-logo.png" alt="Bull AI" class="brand-text" />
+      </div>
+      <div class="eyebrow">Equity Research Automation</div>
+      <h1>Turn a filing into a report.</h1>
+      <p class="sub">Upload a company's financial document — PDF, CSV, or TXT — and get back a
+      formatted research report, tables and charts included.</p>
+    </header>
+
+    <section id="form-card" class="card">
+      <form id="job-form">
+        <label class="field">
+          <span class="field-label">Company name</span>
+          <input id="company-name" name="company_name" type="text" placeholder="e.g. Eternal Ltd." required autocomplete="off" />
+        </label>
+
+        <label id="dropzone" class="dropzone" for="file-input">
+          <input id="file-input" name="file" type="file" accept=".pdf,.csv,.txt" hidden />
+          <div class="dz-icon">↑</div>
+          <div class="dz-text">
+            <strong>Drop a file</strong> or click to browse
+            <div class="dz-hint">PDF, CSV, or TXT</div>
+          </div>
+          <div id="dz-filename" class="dz-filename" hidden></div>
+        </label>
+
+        <button id="submit-btn" type="submit" class="btn-primary">
+          <span>Generate Report</span>
+        </button>
+      </form>
+    </section>
+
+    <section id="progress-card" class="card" hidden>
+      <h2 class="card-title">Generating your report</h2>
+      <ol id="step-list" class="step-list"></ol>
+
+      <div id="result-block" class="result-block" hidden>
+        <div id="result-success" class="result-row" hidden>
+          <div class="result-check">✓</div>
+          <div>
+            <div class="result-title">Report ready</div>
+            <div class="result-sub">All sections extracted and rendered.</div>
+          </div>
+          <a id="download-link" class="btn-primary btn-download" href="#" download>Download PDF</a>
+        </div>
+        <div id="result-error" class="result-row error" hidden>
+          <div class="result-check err">!</div>
+          <div>
+            <div class="result-title">Something went wrong</div>
+            <div id="error-detail" class="result-sub"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="reset-btn" class="btn-ghost" hidden>Start another report</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+anthropic
+jinja2
+playwright
+pydantic
+python-dotenv
+pypdf
