@@ -5,6 +5,12 @@ equity-research PDF report — tables, narrative, and charts — modeled on the 
 sample report. See [PLAN.md](PLAN.md) for the full design and [WHY_THIS_APPROACH.md](WHY_THIS_APPROACH.md)
 for the reasoning behind the architecture.
 
+## Screenshots
+
+| Upload | Generating | Report ready |
+| --- | --- | --- |
+| ![Upload form](docs/screenshots/upload-form.png) | ![Generating report](docs/screenshots/generating-report.png) | ![Report ready](docs/screenshots/report-ready.png) |
+
 ## Run it
 
 ```bash
